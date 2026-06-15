@@ -239,11 +239,10 @@
         time = time + ':00';
       }
 
-      // Get existing bookings for that date/time
+      // Get existing bookings for the date/time
       const existingBookings = await Database.getAllBookings();
       
       // Get labs that are already booked in the same HOUR (not just exact time)
-      // Extract hour from selected time (e.g., "08:30:00" -> "08")
       const selectedHour = time.split(':')[0];
       
       const bookedLabs = existingBookings
@@ -303,7 +302,7 @@
       document.getElementById('selectedSystem').textContent = `${lab.building}, ${lab.floor}`;
       bookingSection.style.display = 'block';
       
-      // Store for confirmation - use time_out to match Supabase column name
+      // Store for confirmation (time_out to match Supabase column name)
       bookingSection.dataset.booking = JSON.stringify({ lab: lab.name, date, time, time_out: timeOut });
     }
 
@@ -455,7 +454,7 @@
 
   // Confirmation page
   if(document.getElementById('confirmLab')){
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(window.location.search);  
     const bookingId = urlParams.get('id');
     
     async function loadConfirmationDetails(){
@@ -621,7 +620,6 @@ if (document.getElementById('labsList')) {
 
   // Calendar
   let bookingsByDate = {}; // Store bookings organized by date
-  let bookingsSubscription = null; // Store subscription for cleanup
 
   function monthName(y,m){
     return new Date(y,m,1).toLocaleString(undefined,{ month:'long' });
@@ -723,7 +721,7 @@ if (document.getElementById('labsList')) {
         <button class="btn outline" aria-label="Next" id="nextMonth">▶</button>
       `;
       
-      // Add event listeners to date cells
+      // Event listeners to date cells
       const dateCells = cal.querySelectorAll('td[data-date]');
       console.log('DEBUG: Date cells found:', dateCells.length);
       dateCells.forEach(cell => {
@@ -741,27 +739,7 @@ if (document.getElementById('labsList')) {
     // Initial load
     update();
     
-    // Set up real-time subscription for bookings
-    if(bookingsSubscription) {
-      bookingsSubscription.unsubscribe();
-    }
-    
-    try {
-      bookingsSubscription = supabaseClient
-        .channel('bookings-changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'bookings' },
-          (payload) => {
-            console.log('DEBUG: Booking change detected:', payload);
-            update(); // Refresh calendar when any booking changes
-          }
-        )
-        .subscribe((status) => {
-          console.log('DEBUG: Subscription status:', status);
-        });
-    } catch (error) {
-      console.warn('DEBUG: Real-time subscription not available (Realtime may not be enabled):', error);
-    }
+    // Local refresh after loading bookings; no realtime dependency is required.
   }
 
   async function showBookingDetails(dateStr){

@@ -8,7 +8,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    if (window.location.protocol === 'file:') {
+      const path = decodeURIComponent(window.location.pathname || '').replace(/\\/g, '/');
+      const target = `http://localhost/ISKOVA_WebDev/ISKOVA${path.replace(/^[A-Za-z]:\\xampp\\htdocs\\/i, '/').replace(/\\/g, '/')}`;
+      if (window.location.href !== target) {
+        window.location.replace(target);
+      }
+    }
+  </script>
   <script src="js/supabase-config.js"></script>
   <script src="js/auth.js"></script>
 </head>
@@ -23,7 +31,7 @@
       <a href="pages/availability.html">Check Availability</a>
       <a href="pages/reserve.html">Reserve</a>
       <a href="pages/labs.html">Labs</a>
-      <a href="pages/dashboard.html">Dashboard</a>
+      <a href="pages/dashboard.html">Dashboard</a>  
       <a href="pages/manage.html">Manage</a>
       <a href="pages/contact.html">Contact</a>
     </nav>

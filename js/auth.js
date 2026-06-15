@@ -1,53 +1,82 @@
-// Authentication and Database Functions using Supabase
+// Authentication and database helpers backed by a PHP/MySQL API
+
+async function requestJson(endpoint, options = {}) {
+  if (window.location.protocol === 'file:') {
+    throw new Error('Please open the project through a local PHP server such as XAMPP, WAMP, or Laragon. Opening the HTML files directly from the file system will not run the MySQL API.');
+  }
+
+  const apiBaseUrl = window.API_BASE_URL || (window.location.pathname.includes('/pages/') ? '../api' : 'api');
+
+  let response;
+  try {
+    response = await fetch(`${apiBaseUrl}/${endpoint}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      ...options
+    });
+  } catch (error) {
+    throw new Error('The authentication server could not be reached. Make sure your PHP/MySQL server is running and the project is being served from localhost.');
+  }
+
+  const text = await response.text();
+  let payload = {};
+
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch (error) {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Request failed');
+  }
+
+  return payload;
+}
 
 const Auth = {
-  // Register new user
   async register(email, password, fullName, userId) {
     try {
-      // Sign up user with Supabase Auth
-      const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            full_name: fullName,
-            user_id: userId
-          }
-        }
+      const result = await requestJson('auth.php?action=register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: fullName,
+          user_id: userId
+        })
       });
 
-      if (authError) throw authError;
-
-      // The trigger will automatically create the user profile
-      return { success: true, user: authData.user };
+      return { success: true, user: result.user };
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, error: error.message };
     }
   },
 
-  // Login user
   async login(email, password) {
     try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password
+      const result = await requestJson('auth.php?action=login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          user_id: email,
+          password
+        })
       });
 
-      if (error) throw error;
-
-      return { success: true, user: data.user };
+      return { success: true, user: result.user };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, error: error.message };
     }
   },
 
-  // Logout user
   async logout() {
     try {
-      const { error } = await supabaseClient.auth.signOut();
-      if (error) throw error;
+      await requestJson('auth.php?action=logout', { method: 'POST' });
       return { success: true };
     } catch (error) {
       console.error('Logout error:', error);
@@ -55,25 +84,22 @@ const Auth = {
     }
   },
 
-  // Get current user
   async getCurrentUser() {
     try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      return user;
+      const result = await requestJson('auth.php?action=me');
+      return result.user || null;
     } catch (error) {
       console.error('Get user error:', error);
       return null;
     }
   },
 
-  // Reset password
   async resetPassword(email) {
     try {
-      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/pages/reset-password.html'
+      await requestJson('auth.php?action=reset', {
+        method: 'POST',
+        body: JSON.stringify({ email })
       });
-
-      if (error) throw error;
       return { success: true };
     } catch (error) {
       console.error('Reset password error:', error);
@@ -83,43 +109,26 @@ const Auth = {
 };
 
 const Database = {
-  // Get all bookings for current user
   async getBookings() {
     try {
-      const user = await Auth.getCurrentUser();
-      if (!user) return [];
-
-      const { data, error } = await supabaseClient
-        .from('bookings')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      const result = await requestJson('bookings.php?action=getBookings');
+      return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Get bookings error:', error);
       return [];
     }
   },
 
-  // Get ALL bookings (for checking availability)
   async getAllBookings() {
     try {
-      const { data, error } = await supabaseClient
-        .from('bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      const result = await requestJson('bookings.php?action=getAllBookings');
+      return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Get all bookings error:', error);
       return [];
     }
   },
 
-  // Create new booking
   async createBooking(bookingData) {
     try {
       const user = await Auth.getCurrentUser();
@@ -132,33 +141,27 @@ const Database = {
         time: bookingData.time,
         time_out: bookingData.time_out,
         system: bookingData.system,
-        status: 'pending',
-        created_at: new Date().toISOString()
+        status: 'pending'
       };
 
-      const { data, error } = await supabaseClient
-        .from('bookings')
-        .insert([booking])
-        .select()
-        .single();
+      const result = await requestJson('bookings.php?action=createBooking', {
+        method: 'POST',
+        body: JSON.stringify(booking)
+      });
 
-      if (error) throw error;
-      return { success: true, booking: data };
+      return { success: true, booking: result.booking };
     } catch (error) {
       console.error('Create booking error:', error);
       return { success: false, error: error.message };
     }
   },
 
-  // Update booking status
   async updateBookingStatus(bookingId, status) {
     try {
-      const { error } = await supabaseClient
-        .from('bookings')
-        .update({ status: status })
-        .eq('id', bookingId);
-
-      if (error) throw error;
+      await requestJson('bookings.php?action=updateBookingStatus', {
+        method: 'POST',
+        body: JSON.stringify({ id: bookingId, status })
+      });
       return { success: true };
     } catch (error) {
       console.error('Update booking error:', error);
@@ -166,15 +169,12 @@ const Database = {
     }
   },
 
-  // Delete booking
   async deleteBooking(bookingId) {
     try {
-      const { error } = await supabaseClient
-        .from('bookings')
-        .delete()
-        .eq('id', bookingId);
-
-      if (error) throw error;
+      await requestJson('bookings.php?action=deleteBooking', {
+        method: 'POST',
+        body: JSON.stringify({ id: bookingId })
+      });
       return { success: true };
     } catch (error) {
       console.error('Delete booking error:', error);
@@ -182,79 +182,45 @@ const Database = {
     }
   },
 
-  // Count pending bookings for current user
   async countPendingBookings() {
     try {
-      const user = await Auth.getCurrentUser();
-      if (!user) return 0;
-
-      const { data, error } = await supabaseClient
-        .from('bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'pending');
-
-      if (error) throw error;
-      return data?.length || 0;
+      const result = await requestJson('bookings.php?action=countPendingBookings');
+      return Number(result.count || 0);
     } catch (error) {
       console.error('Count pending bookings error:', error);
       return 0;
     }
   },
 
-  // Check and auto-expire pending bookings older than 24 hours
   async expireOldPendingBookings() {
     try {
-      const user = await Auth.getCurrentUser();
-      if (!user) return;
-
-      // Calculate timestamp for 24 hours ago
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-      const { error } = await supabaseClient
-        .from('bookings')
-        .update({ status: 'expired' })
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .lt('created_at', oneDayAgo);
-
-      if (error) console.error('Expire pending bookings error:', error);
+      await requestJson('bookings.php?action=expireOldPendingBookings', { method: 'POST' });
     } catch (error) {
       console.error('Expire pending bookings error:', error);
     }
   },
 
-  // Get all labs
   async getLabs() {
     try {
-      const { data, error } = await supabaseClient
-        .from('labs')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+      const result = await requestJson('bookings.php?action=getLabs');
+      return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Get labs error:', error);
-      // Return fallback data if database not set up
       return [
-        { name: "Lab A", capacity: 15, computers: 15, type: "small",  status: "available", building: "Southwing", floor: "5th Floor" },
-        { name: "Lab B", capacity: 20, computers: 20, type: "small",  status: "available", building: "Southwing", floor: "5th Floor" },
-
-        { name: "Lab C", capacity: 25, computers: 25, type: "medium", status: "available",  building: "Southwing", floor: "5th Floor" },
-        { name: "Lab D", capacity: 30, computers: 30, type: "medium", status: "available", building: "Southwing", floor: "5th Floor" },
-        { name: "Lab E", capacity: 35, computers: 35, type: "medium", status: "available", building: "Southwing", floor: "5th Floor" },
-        { name: "Lab F", capacity: 40, computers: 40, type: "medium", status: "available",  building: "Southwing", floor: "5th Floor" },
-
-        { name: "Lab G", capacity: 45, computers: 45, type: "large",  status: "available", building: "Southwing", floor: "5th Floor" },
-        { name: "Lab H", capacity: 50, computers: 50, type: "large",  status: "available", building: "Southwing", floor: "5th Floor" },
-        { name: "Lab I", capacity: 60, computers: 60, type: "large",  status: "available", building: "Southwing", floor: "5th Floor" },
-        { name: "Lab J", capacity: 80, computers: 80, type: "large",  status: "available", building: "Southwing", floor: "5th Floor" }
+        { name: 'Lab A', capacity: 15, computers: 15, type: 'small', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab B', capacity: 20, computers: 20, type: 'small', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab C', capacity: 25, computers: 25, type: 'medium', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab D', capacity: 30, computers: 30, type: 'medium', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab E', capacity: 35, computers: 35, type: 'medium', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab F', capacity: 40, computers: 40, type: 'medium', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab G', capacity: 45, computers: 45, type: 'large', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab H', capacity: 50, computers: 50, type: 'large', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab I', capacity: 60, computers: 60, type: 'large', status: 'available', building: 'Southwing', floor: '5th Floor' },
+        { name: 'Lab J', capacity: 80, computers: 80, type: 'large', status: 'available', building: 'Southwing', floor: '5th Floor' }
       ];
     }
   }
 };
 
-// Export functions
 window.Auth = Auth;
 window.Database = Database;
