@@ -303,7 +303,7 @@
       bookingSection.style.display = 'block';
       
       // Store for confirmation (time_out to match Supabase column name)
-      bookingSection.dataset.booking = JSON.stringify({ lab: lab.name, date, time, time_out: timeOut });
+      bookingSection.dataset.booking = JSON.stringify({ lab: lab.name, date, time, time_out: timeOut, system: `${lab.building}, ${lab.floor}` });
     }
 
     // Confirm booking button
@@ -350,8 +350,10 @@
         
         const booking = await saveReservation(bookingData);
         if(booking){
-          alert('Booking created! Please confirm it in Manage Reservations.');
-          location.href = 'manage.html';
+          // Save booking to localStorage for confirmation page
+          localStorage.setItem('lastBooking', JSON.stringify(booking));
+          // Redirect to confirmation page with booking ID
+          location.href = `confirmation.html?id=${booking.id}`;
         } else {
           alert('Failed to create booking. Please try again.');
         }
@@ -460,13 +462,15 @@
     async function loadConfirmationDetails(){
       let booking = null;
       
-      if(bookingId){
+      // First, try to get from localStorage (most recent booking)
+      try{
+        booking = JSON.parse(localStorage.getItem('lastBooking') || 'null');
+      }catch{}
+      
+      // If not in localStorage, try to fetch from API using booking ID
+      if(!booking && bookingId){
         const reservations = await getReservations();
-        booking = reservations.find(b => b.id === bookingId);
-      } else {
-        try{
-          booking = JSON.parse(localStorage.getItem('lastBooking') || 'null');
-        }catch{}
+        booking = reservations.find(b => parseInt(b.id) === parseInt(bookingId));
       }
 
       if(booking){
@@ -478,9 +482,9 @@
         document.getElementById('confirmId').textContent = booking.id || 'N/A';
         document.getElementById('confirmStatus').textContent = booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Confirmed';
         
-        // Get current user
+        // Get current user 
         const user = await getUser();
-        document.getElementById('confirmBookedBy').textContent = user?.user_metadata?.full_name || user?.email || 'N/A';
+        document.getElementById('confirmBookedBy').textContent = user?.full_name || user?.email || 'N/A';
         
         // Format the booking creation timestamp
         const bookedAtTime = new Date().toLocaleString(undefined, { 
