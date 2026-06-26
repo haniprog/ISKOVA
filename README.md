@@ -1,57 +1,42 @@
 # ISKOVA Lab Booking System
 
-A simple, clean computer lab reservation system built with vanilla HTML, CSS, and JavaScript.
+## About the project
+ISKOVA is a web-based system for booking computer labs quickly and easily. It allows users to browse available labs, reserve a time slot, and manage their bookings from one simple interface.
 
-## 📁 Project Structure
+## The problem it solves
+The project solves the problem of manual or confusing lab booking processes. Instead of relying on email, phone calls, or in-person coordination, users can check availability instantly and confirm reservations online.
 
-```
-iskova-labs/
-├── index.html              # Homepage (entry point)
-├── config.json            # Configuration file
-├── README.md              # Project documentation
-│
-├── assets/                # Images, logos, backgrounds
-│   └── logo.svg
-│
-├── css/                   # Stylesheets
-│   └── styles.css         # Main stylesheet
-│
-├── js/                    # JavaScript files
-│   └── script.js          # Main application logic
-│
-└── pages/                 # All other HTML pages
-    ├── login.html         # User login
-    ├── register.html      # User registration
-    ├── forgot-password.html  # Password reset
-    ├── dashboard.html     # User dashboard with booking history
-    ├── labs.html          # Labs listing with search/filter
-    ├── availability.html  # Calendar view
-    ├── reserve.html       # New booking form
-    ├── manage.html        # Manage existing bookings
-    └── confirmation.html  # Booking confirmation with QR code
-```
+## Technologies used
+- Frontend: HTML, CSS, and JavaScript
+- Backend: PHP for authentication and booking APIs
+- Database: MySQL
+- Extras: QR code support and responsive web design
 
-## 🚀 Features
+## Contributions
+- Built the main booking flow from the landing page to confirmation
+- Designed and implemented pages for login, registration, reservations, dashboard, availability, and management
+- Connected the frontend to backend APIs for user authentication and booking actions
+- Structured the project so it can run locally using XAMPP
 
-- **User Authentication** - Login, register, and password reset
-- **Lab Browsing** - View all available labs with filtering
-- **Booking System** - Reserve labs with date/time selection
-- **Dashboard** - View booking history and statistics
-- **Calendar** - Check availability by month
-- **QR Codes** - Get QR codes for confirmed bookings
-- **Contact Form** - Get in touch with support
+## How to run
+1. Place the project folder inside your XAMPP htdocs directory.
+2. Start Apache and MySQL from the XAMPP control panel.
+3. Open the API setup page to initialize the database if needed.
+4. Visit http://localhost/ISKOVA_WebDev/ISKOVA in your browser.
+5. Register or log in, then start booking a lab.
+
+## Interface
+The interface includes a clean landing page, an availability calendar, a reservation form, a dashboard for managing bookings, and a confirmation screen with QR code support. It is designed to feel simple, modern, and easy to use.
+
+## Project structure
+- index.html: Home page
+- pages/: Reservation, availability, dashboard, login, and management pages
+- css/: Styling
+- js/: Frontend interaction and API integration
+- api/: PHP backend for authentication and bookings
 
 
-## 📄 Pages Overview
 
-| Page | Purpose |
-|------|---------|
-| `index.html` | Landing page with hero section |
-| `pages/login.html` | User login form |
-| `pages/register.html` | New user registration |
-| `pages/dashboard.html` | User's booking management center |
-| `pages/labs.html` | Browse all computer labs |
-| `pages/availability.html` | Calendar view of availability |
-| `pages/reserve.html` | Create new booking |
-| `pages/confirmation.html` | Booking confirmation screen |
-| `pages/contact.html` | Contact form |
+
+
+
